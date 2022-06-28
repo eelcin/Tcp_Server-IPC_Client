@@ -11,6 +11,11 @@ void reset_buff(char *buffer){
   memset(buffer, 0x0, sizeof(buffer));
 }//dub
 
+struct msgbuf {
+   long mType;
+   char mText[1024];
+};
+
 // Reset buffer then Copy text content to buffer
 // Send N bytes of BUF to socket FD. Prints send data or error msg if there is a error.
 void send_safe(int sock, char *buffer, int buff_len, char *text){
@@ -42,6 +47,11 @@ void recv_safe(int sock, char *buffer, int buff_len){
     perror("[-]recv error");
     exit(1);
   }
+
+  else if (buffer[0] == 0x0)
+  {
+  }
+
   else{
    printf("Server: %s\n \n", buffer); 
   }
@@ -72,8 +82,18 @@ int main(){
   int sock;
   struct sockaddr_in addr;
   socklen_t addr_size;
-  char buffer[1024];
+  char buffer[1024];  
   int n;
+
+  int qId;
+  key_t key;
+  struct msgbuf msg, buf;
+  struct msqid_ds msgCtlBuf;
+
+  if ( ( key = ftok( "/tmp", 'C' ) ) == -1 ) {
+      perror( "client: ftok failed:" );
+      exit( 1 );
+   }/////////////////////////////////////////////////////
 
   sock = socket(AF_INET, SOCK_STREAM, 0);
   if (sock < 0){
