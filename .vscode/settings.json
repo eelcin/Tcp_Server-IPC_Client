@@ -5,6 +5,9 @@
         "unistd.h": "c",
         "stdio.h": "c",
         "stdlib.h": "c",
-        "math.h": "c"
+        "math.h": "c",
+        "msg.h": "c",
+        "types.h": "c",
+        "pthread.h": "c"
     }
 }

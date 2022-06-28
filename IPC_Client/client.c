@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/msg.h>
+#include <pthread.h>
 
 //resets buffer
 void reset_buff(char *buffer){
@@ -77,7 +78,7 @@ void connect_safe(int sock, struct sockaddr_in addr, int addr_len){
 int main(){
 
   char *ip = "127.0.0.1";
-  int port = 9999;
+  int port = 8080;
 
   int sock;
   struct sockaddr_in addr;

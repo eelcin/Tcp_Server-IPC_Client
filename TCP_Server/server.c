@@ -6,13 +6,30 @@
 #include <math.h>
 #include <sys/types.h>
 #include <sys/msg.h>
+#include <pthread.h>
 
 #define _OPEN_SYS_ITOA_EXT
+
+int client_sock;
 
 struct msgbuf {
    long mType;
    char mText[1024];
 };
+
+struct deneme
+{
+  int a;
+  int b;
+};
+
+struct connection_thread_in
+{
+  int server_sock;
+  struct sockaddr* client_addr;
+  socklen_t addr_size;
+};
+
 
 //resets buffer
 void reset_buff(char *buffer){
@@ -60,12 +77,41 @@ void recv_safe(int sock, char *buffer, int buff_len){
   }
 }
 
+void *wait_connection (void *input ){
+
+  //int server_sock, struct sockaddr* client_addr, socklen_t addr_size
+  while (1)
+  {
+    struct connection_thread_in *args = input;
+
+    client_sock = accept(args->server_sock, args->client_addr, &args->addr_size);
+
+    if (client_sock < 0){
+      perror("[-]client_sock error \n \n");
+      exit(1);
+    }
+
+    else{
+      printf("[+]Client connected.\n \n");
+    }
+  }
+}
+
+void *myThreadFun(void *input){
+
+  struct deneme *args = input;
+
+  int c = args->a + args->b;
+
+  printf("Sum: %d \n a: %d \n b: %d \n \n", c, args->a, args->b);
+}
+
 int main(){
 
   char *ip = "127.0.0.1";
-  int port = 9999;
+  int port = 8080;
 
-  int server_sock, client_sock;
+  int server_sock;
   struct sockaddr_in server_addr, client_addr;
   socklen_t addr_size;
   char buffer[1024];
@@ -98,10 +144,32 @@ int main(){
   printf("Listening...\n \n");
 
   addr_size = sizeof(client_addr);
-  client_sock = accept(server_sock, (struct sockaddr*)&client_addr, &addr_size);
-  printf("[+]Client connected.\n \n");
+  
+  printf("Hello : %d \n \n", addr_size);
+
+  //client_sock = accept(server_sock, (struct sockaddr*)&client_addr, &addr_size);
+  //printf("[+]Client connected: %d \n \n", client_sock);
+
+  //wait_connection(server_sock, (struct sockaddr*)&client_addr, addr_size);
+
+  pthread_t thread_id;
+/*
+  struct deneme input;
+
+  input.a = 1;
+  input.b = 2;
+*/
+  struct connection_thread_in input;
+
+  input.addr_size = addr_size;
+  input.client_addr = (struct sockaddr*)&client_addr;
+  input.server_sock = server_sock;
+
+  pthread_create(&thread_id, NULL, wait_connection, (void *)&input);
 
   int connected = 1;
+
+  sleep(5);
 
   while(connected){
 
@@ -131,6 +199,8 @@ int main(){
     }
 
   }
+
+  pthread_join(thread_id, NULL);
 
   return 0;
 }
