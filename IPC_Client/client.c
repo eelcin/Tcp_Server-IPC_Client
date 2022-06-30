@@ -78,7 +78,7 @@ void connect_safe(int sock, struct sockaddr_in addr, int addr_len){
 int main(){
 
   char *ip = "127.0.0.1";
-  int port = 8080;
+  int port = 8888;
 
   int sock;
   struct sockaddr_in addr;
@@ -143,7 +143,7 @@ int main(){
 
     sleep(1);
 
-    if (atoi(buffer) >= 20){
+    if (atoi(buffer) >= 20 || atoi(buffer) == -1){
       connected = 0;
       
       //send_safe(sock, buffer, sizeof(buffer), "-1");

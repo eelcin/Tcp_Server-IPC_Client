@@ -8,6 +8,7 @@
         "math.h": "c",
         "msg.h": "c",
         "types.h": "c",
-        "pthread.h": "c"
+        "pthread.h": "c",
+        "signal.h": "c"
     }
 }

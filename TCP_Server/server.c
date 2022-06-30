@@ -8,10 +8,12 @@
 #include <sys/msg.h>
 #include <pthread.h>
 #include <errno.h>
+#include <signal.h>
 
 #define _OPEN_SYS_ITOA_EXT
 
 int client_sock;
+char buffer[1024];
 
 struct msgbuf {
    long mType;
@@ -39,13 +41,13 @@ void reset_buff(char *buffer){
 
 // Reset buffer then Copy text content to buffer
 // Send N bytes of BUF to socket FD. Prints send data or error msg if there is a error.
-void send_safe(int sock, char *buffer, int buff_len, char *text){
+void send_safe(int sock, char *buffer, char *text){
 
   reset_buff(buffer); // Reset buffer  
 
   strcpy(buffer, text); // Copy text content to buffer
   
-  int send_success = send(sock, buffer, buff_len, 0); // Send N bytes of BUF to socket FD. Returns the number sent or -1.
+  int send_success = send(sock, buffer, sizeof(buffer), 0); // Send N bytes of BUF to socket FD. Returns the number sent or -1.
 
   if (send_success < 0){
     perror("[-]send error: \n \n");
@@ -107,15 +109,25 @@ void *myThreadFun(void *input){
   printf("Sum: %d \n a: %d \n b: %d \n \n", c, args->a, args->b);
 }
 
+void handle_sigint(int sig)
+{
+  printf("Caught signal %d\n", sig);
+
+  send_safe(client_sock, buffer, "-1");
+
+  printf("Server exited. \n \n");
+
+  exit(8);
+}
+
 int main(){
 
   char *ip = "127.0.0.1";
-  int port = 8080;
+  int port = 8888;
 
   int server_sock;
   struct sockaddr_in server_addr, client_addr;
   socklen_t addr_size;
-  char buffer[1024];
   int n;
 
   int qId;
@@ -174,6 +186,8 @@ int main(){
 
   pthread_create(&thread_id, NULL, wait_connection, (void *)&input);
 
+  signal(SIGINT, handle_sigint);
+
   int connected = 1;
 
   while(connected){
@@ -207,7 +221,7 @@ int main(){
 
       sprintf(str, "%d", answer);
 
-      send_safe(client_sock, buffer, sizeof(buf.mText), str);
+      send_safe(client_sock, buffer, str);
 
     }
     else{
