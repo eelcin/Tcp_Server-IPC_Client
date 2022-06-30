@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/msg.h>
 #include <pthread.h>
+#include <errno.h>
 
 #define _OPEN_SYS_ITOA_EXT
 
@@ -119,6 +120,22 @@ int main(){
 
   int qId;
   key_t key;
+  struct msgbuf msg, buf;
+  struct msqid_ds msgCtlBuf;
+
+  if ( ( key = ftok( "/tmp", 'C' ) ) == -1 ) {
+    perror( "client: ftok failed:" );
+    exit( 1 );
+  }
+
+  printf( "client: System V IPC key = %u\n", key );
+
+  if ( ( qId = msgget( key, IPC_CREAT | 0666 ) ) == -1 ) {
+    perror( "client: Failed to create message queue:" );
+    exit( 2 );
+  }
+
+  printf( "client: Message queue id = %u\n", qId );
 
   server_sock = socket(AF_INET, SOCK_STREAM, 0);
   if (server_sock < 0){
@@ -145,20 +162,10 @@ int main(){
 
   addr_size = sizeof(client_addr);
   
-  printf("Hello : %d \n \n", addr_size);
-
-  //client_sock = accept(server_sock, (struct sockaddr*)&client_addr, &addr_size);
-  //printf("[+]Client connected: %d \n \n", client_sock);
-
-  //wait_connection(server_sock, (struct sockaddr*)&client_addr, addr_size);
+  printf("Hello : %d \n \n", addr_size);  
 
   pthread_t thread_id;
-/*
-  struct deneme input;
 
-  input.a = 1;
-  input.b = 2;
-*/
   struct connection_thread_in input;
 
   input.addr_size = addr_size;
@@ -169,29 +176,38 @@ int main(){
 
   int connected = 1;
 
-  sleep(5);
-
   while(connected){
 
-    recv_safe(client_sock, buffer, sizeof(buffer));
+    //recv_safe(client_sock, buffer, sizeof(buffer));
+
+    if ( msgrcv( qId, &buf, sizeof msg.mText, 1, 0 ) == -1 )
+      perror( "client: msgrcv failed:" );
+    else
+      printf( "client: = %s\n", buf.mText );
 
     sleep(1);
 
-    if (atoi(buffer) == -1){
+    if (atoi(buf.mText) == -1){
+
       connected = 0;
       close(client_sock);
+      
+      printf( "Server: Message queue removed OK\n" );
+
       printf("[+]Server Closed.\n\n");
+
+      exit( 4 );
     }
 
-    else if ( atoi(buffer) > 0)
+    else if ( atoi(buf.mText) > 0)
     {
-      int answer = atoi(buffer) + 1;
+      int answer = atoi(buf.mText) + 1;
 
       char str[80];
 
       sprintf(str, "%d", answer);
 
-      send_safe(client_sock, buffer, sizeof(buffer), str);
+      send_safe(client_sock, buffer, sizeof(buf.mText), str);
 
     }
     else{

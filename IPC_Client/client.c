@@ -92,9 +92,18 @@ int main(){
   struct msqid_ds msgCtlBuf;
 
   if ( ( key = ftok( "/tmp", 'C' ) ) == -1 ) {
-      perror( "client: ftok failed:" );
-      exit( 1 );
-   }/////////////////////////////////////////////////////
+    perror( "server: ftok failed:" );
+    exit( 1 );
+  }
+
+  printf( "server: System V IPC key = %u\n", key );
+
+  if ( ( qId = msgget( key, IPC_CREAT | 0666 ) ) == -1 ) {
+    perror( "server: Failed to create message queue:" );
+    exit( 2 );
+  }
+
+  printf( "server: Message queue id = %u\n", qId );
 
   sock = socket(AF_INET, SOCK_STREAM, 0);
   if (sock < 0){
@@ -112,9 +121,19 @@ int main(){
 
   connect_safe(sock, addr, sizeof(addr));
 
-  send_safe(sock, buffer, sizeof(buffer), "1");
+  //send_safe(sock, buffer, sizeof(buffer), "1");
 
   //recv_safe(sock, buffer, sizeof(buffer));
+
+  strcpy( msg.mText, "1" );
+  msg.mType = 1;
+
+  if ( msgsnd( qId, &msg, sizeof msg.mText, 0 ) == -1 ) {
+    perror( "Client: msgsnd failed:" );
+    exit( 3 );
+  }
+
+  printf( "Client: Message received = %s\n", msg.mText );
 
   int connected = 1;
 
@@ -126,7 +145,26 @@ int main(){
 
     if (atoi(buffer) >= 20){
       connected = 0;
-      send_safe(sock, buffer, sizeof(buffer), "-1");
+      
+      //send_safe(sock, buffer, sizeof(buffer), "-1");
+
+      strcpy( msg.mText, "-1" );
+      msg.mType = 1;
+
+      if ( msgsnd( qId, &msg, sizeof msg.mText, 0 ) == -1 ) {
+        perror( "Client: msgsnd failed:" );
+        exit( 3 );
+      }
+
+      printf( "Client: Message received = %s\n", msg.mText );
+
+      if ( msgctl( qId, IPC_RMID, &msgCtlBuf ) == -1 ) {
+        perror( "server: msgctl failed:" );
+        exit( 4 );
+      }
+
+      printf( "Client: Message queue removed OK\n" );
+
     }
 
     else if ( atoi(buffer) > 0)
@@ -137,7 +175,17 @@ int main(){
 
       sprintf(str, "%d", answer);
 
-      send_safe(sock, buffer, sizeof(buffer), str);
+      //send_safe(sock, buffer, sizeof(buffer), str);
+
+      strcpy( msg.mText, str );
+      msg.mType = 1;
+
+      if ( msgsnd( qId, &msg, sizeof msg.mText, 0 ) == -1 ) {
+        perror( "Client: msgsnd failed:" );
+        exit( 3 );
+      }
+
+      printf( "Client: Message received = %s\n", msg.mText );
 
     }
 
